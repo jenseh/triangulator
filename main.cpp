@@ -13,6 +13,7 @@ std::vector<std::vector<vec2>> verticesLists;
 
 PlanarGraphTriangulatorSeidel triangulator;
 TriangleMesh2D* triangles = NULL;
+PlanarGraphTriangulatorSeidel::TrapezoidMesh2D* trapezoidulation = NULL;
 
 vec3 colors[] = {vec3(1.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f), vec3(0.0f, 0.0f, 1.0f),
 				 vec3(1.0f, 1.0f, 0.0f), vec3(1.0f, 0.0f, 1.0f), vec3(0.0f, 1.0f, 1.0f), 
@@ -26,21 +27,25 @@ void onResize(int w, int h) {
 	glViewport(0, 0, w, h);
 }
 
-void onClick(int button, int action) {
+void GLFWCALL onClick(int button, int action) {
 	if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
 		ivec2 pos;
 		glfwGetMousePos(&pos.x, &pos.y);
 		verticesLists.back().push_back(vec2(2.0f / width, -2.0f / height) * vec2(pos) + vec2(-1.0f, 1.0f));
+		delete triangles;
+		triangles = NULL;
 	}
 	if(button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS) {
 		verticesLists.emplace_back();
 		ivec2 pos;
 		glfwGetMousePos(&pos.x, &pos.y);
 		verticesLists.back().push_back(vec2(2.0f / width, -2.0f / height) * vec2(pos) + vec2(-1.0f, 1.0f));
+		delete triangles;
+		triangles = NULL;
 	}
 }
 
-void onKey(int key, int action) {
+void GLFWCALL onKey(int key, int action) {
 	if(action == GLFW_PRESS) {
 		std::vector<SegmentEndpoints2D> segments;// vordeklarieren da im switch nicht möglich
 		switch(key) {
@@ -70,7 +75,8 @@ void onKey(int key, int action) {
 					}
 				}
 				delete triangles;
-				triangles = triangulator.triangulate(segments.begin(), segments.end());
+				trapezoidulation = triangulator.trapezoidulate(segments.begin(), segments.end());
+				//triangles = triangulator.triangulate(segments.begin(), segments.end());
 				break;
 			case GLFW_KEY_ESC:
 				glfwCloseWindow();
@@ -79,7 +85,7 @@ void onKey(int key, int action) {
 	}
 }
 
-int main(int argc, char **argv) {
+int GLFWCALL main(int argc, char **argv) {
 	
 	glfwInit();
 	glfwOpenWindow(width, height, 0, 0, 0, 0, 0, 0, GLFW_WINDOW);
@@ -101,7 +107,7 @@ int main(int argc, char **argv) {
 			glBegin(GL_TRIANGLES);
 			int i = 0;
 			for(hpuint index : *triangles->getIndices()) {
-				//glColor3fv((float*) &colors[i / 3]);
+				glColor3fv((float*) &colors[i / 3]);
 				glVertex2fv((float*) &(*triangles->getVerticesAndNormals())[2 * index]);
 				i = (i + 1) % (3 * nColors);
 			}
@@ -137,7 +143,12 @@ int main(int argc, char **argv) {
 		}
 		glEnd();
 		
+		if(trapezoidulation) {
+			trapezoidulation->drawDebug();
+		}
+		
 		glfwSwapBuffers();
+		
 		
 	};
 	

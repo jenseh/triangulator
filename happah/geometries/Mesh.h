@@ -10,15 +10,14 @@ using namespace std;
 template<typename T>
 class Mesh {
 public:
-	Mesh(vector<T>* verticesAndNormals, vector<hpuint>* indices);
-	virtual ~Mesh();
+Mesh(vector<T>* verticesAndNormals, vector<hpuint>* indices);
+virtual ~Mesh();
 
-	vector<T>* getVerticesAndNormals();
-	vector<hpuint>* getIndices();
+vector<T>* getVerticesAndNormals();
+vector<hpuint>* getIndices();
 
 private:
-	vector<T>* m_verticesAndNormals;
-	vector<hpuint>* m_indices;
+vector<T>* m_verticesAndNormals;
+vector<hpuint>* m_indices;
 
 };
-

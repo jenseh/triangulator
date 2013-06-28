@@ -2,7 +2,7 @@
 
 template<typename T>
 TriangleMesh<T>::TriangleMesh(vector<T>* verticesAndNormals,vector<hpuint>* indices)
-		: Mesh<T>(verticesAndNormals, indices) {}
+: Mesh<T>(verticesAndNormals, indices) {}
 
 template<typename T>
 TriangleMesh<T>::~TriangleMesh() {}
