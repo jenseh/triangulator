@@ -6,8 +6,8 @@ template<typename T>
 struct SegmentEndpoints {
 SegmentEndpoints(T a, T b) : a(a), b(b) {};
 
-T& a;
-T& b;
+T a;
+T b;
 };
 
 typedef SegmentEndpoints<hpvec2> SegmentEndpoints2D;

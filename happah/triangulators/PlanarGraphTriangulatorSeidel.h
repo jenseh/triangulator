@@ -21,6 +21,7 @@ public:
 	class Trapezoid {
 		friend PlanarGraphTriangulatorSeidel;
 		public:
+			~Trapezoid();
             /**
 			 * splitHorizontal
 			 *
@@ -50,65 +51,49 @@ public:
 			 * @brief Simple setter for the sink
 			 */
 			void setSink(Sink* sink) {this->sink = sink;};
+			
+			Sink* getSink() {return sink;};
 
 			Trapezoid* getNextAlongSegment(const SegmentEndpoints2D* segment);
 			
 			void drawDebug() {
-				hpdouble upperY;
-				hpdouble lowerY;
-				
-				if(leftSegment && rightSegment) {
-					upperY = glm::min(glm::max(leftSegment->a.y, leftSegment->b.y), glm::max(rightSegment->a.y, rightSegment->b.y));
-					lowerY = glm::max(glm::min(leftSegment->a.y, leftSegment->b.y), glm::min(rightSegment->a.y, rightSegment->b.y));
-				} else if(leftSegment) {
-					upperY = glm::max(leftSegment->a.y, leftSegment->b.y);
-					lowerY = glm::min(leftSegment->a.y, leftSegment->b.y);
-				} else if(rightSegment){
-					upperY = glm::max(rightSegment->a.y, rightSegment->b.y);
-					lowerY = glm::min(rightSegment->a.y, rightSegment->b.y);
-				} else {
-					return;
-				}
-				
+				if(upperLeftVertex.x!=-INFINITY&&upperRightVertex.x!=INFINITY&&
+				lowerLeftVertex.x!=-INFINITY&&lowerRightVertex.x!=INFINITY)
+					printf("(%.3f, %.3f)->(%.3f, %.3f)\n(%.3f, %.3f)->(%.3f, %.3f)\n", upperLeftVertex.x, upperLeftVertex.y, upperRightVertex.x, upperRightVertex.y, lowerLeftVertex.x, lowerLeftVertex.y, lowerRightVertex.x, lowerRightVertex.y);
 				glBegin(GL_LINES);
 				
 				glColor3f(1.0f, 1.0f, 1.0f);
 				
-				if(leftSegment)
-					glVertex2d(getSegment2DX(upperY, leftSegment), upperY);
-				else 
-					glVertex2d(-1.0E10, upperY);
-					
-				if(rightSegment)
-					glVertex2d(getSegment2DX(upperY, rightSegment), upperY);
-				else 
-					glVertex2d(1.0E10, upperY);
-					
-				if(leftSegment)
-					glVertex2d(getSegment2DX(lowerY, leftSegment), lowerY);
-				else 
-					glVertex2d(-1.0E10, lowerY);
-					
-				if(rightSegment)
-					glVertex2d(getSegment2DX(lowerY, rightSegment), lowerY);
-				else 
-					glVertex2d(1.0E100, lowerY);
-					
+				glVertex2fv((float*)&upperLeftVertex);
+				glVertex2fv((float*)&upperRightVertex);
+				glVertex2fv((float*)&lowerLeftVertex);
+				glVertex2fv((float*)&lowerRightVertex);
 				
 				glEnd();
 			};
 
-		private:
+			static void link(Trapezoid* upper, Trapezoid* lower);
+			static void unlink(Trapezoid* first, Trapezoid* second);
+			void addUpper(Trapezoid* upper);
+			void addLower(Trapezoid* lower);
+			void removeUpper(Trapezoid* removee);
+			void removeLower(Trapezoid* removee);
+
+		public:
 			Sink* sink; /**< The sink object*/
             
-  
+			hpvec2 lowerLeftVertex = hpvec2(-INFINITY, -INFINITY);
+			hpvec2 lowerRightVertex = hpvec2(INFINITY, -INFINITY);
+			hpvec2 upperLeftVertex = hpvec2(-INFINITY, INFINITY);
+			hpvec2 upperRightVertex = hpvec2(INFINITY, INFINITY);
+			
 			SegmentEndpoints2D* leftSegment = NULL;   /**< Left bounding segment */
 			SegmentEndpoints2D* rightSegment = NULL;  /**< Right bounding segment */
 
-			Trapezoid* upperLeft = NULL;    /**< Adjacent Trapezoid at the upper left */
-			Trapezoid* upperRight = NULL;   /**< Adjacent Trapezoid at the upper right */
-			Trapezoid* lowerLeft = NULL;    /**< Adjacent Trapezoid at the lower left */
-			Trapezoid* lowerRight = NULL;   /**< Adjacent Trapezoid at the lower right */
+			Trapezoid* upperLeft = NULL;
+			Trapezoid* upperRight = NULL;
+			Trapezoid* lowerLeft = NULL;
+			Trapezoid* lowerRight = NULL;
 	};
 
     /**
