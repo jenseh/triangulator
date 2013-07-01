@@ -56,12 +56,16 @@ void GLFWCALL onKey(int key, int action) {
 						verticesLists.pop_back();
 					}
 				}
+				delete trapezoidulation;
+				trapezoidulation = NULL;
 				delete triangles;
 				triangles = NULL;
 				break;
 			case GLFW_KEY_DEL:
 				verticesLists.clear();
 				verticesLists.emplace_back();
+				delete trapezoidulation;
+				trapezoidulation = NULL;
 				delete triangles;
 				triangles = NULL;
 				break;
@@ -74,8 +78,9 @@ void GLFWCALL onKey(int key, int action) {
 						}
 					}
 				}
-				delete triangles;
+				delete trapezoidulation;
 				trapezoidulation = triangulator.trapezoidulate(segments.begin(), segments.end());
+				delete triangles;
 				//triangles = triangulator.triangulate(segments.begin(), segments.end());
 				break;
 			case GLFW_KEY_ESC:
