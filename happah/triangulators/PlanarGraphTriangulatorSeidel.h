@@ -137,9 +137,9 @@ public:
 				hpvec2 lr = lowerRightVertex;
 
 				if(ul.x == -INFINITY) ul.x = -1.0;				
-				if(ur.x == INFINITY) ur.x = 1.0;				
-				if(ll.x == -INFINITY) ll.x = -1.0;				
-				if(lr.x == INFINITY) lr.x = 1.0;				
+				if(ur.x == INFINITY) ul.x = 1.0;				
+				if(ll.x == -INFINITY) ul.x = -1.0;				
+				if(lr.x == INFINITY) ul.x = 1.0;				
 
 				glLineWidth(2.0f);
 	
@@ -235,10 +235,8 @@ public:
 			SegmentEndpoints2D* rightSegment = NULL;  /**< Right bounding segment */
 
 			Trapezoid* upperLeft = NULL;	/**< Adjacent Trapezoid at the upper left */
-			Trapezoid* upperMiddle = NULL;
 			Trapezoid* upperRight = NULL;	/**< Adjacent Trapezoid at the upper right */
 			Trapezoid* lowerLeft = NULL;	/**< Adjacent Trapezoid at the lower left */
-			Trapezoid* lowerMiddle = NULL;
 			Trapezoid* lowerRight = NULL;	/**< Adjacent Trapezoid at the lower right */
 	};
 
@@ -350,7 +348,7 @@ public:
 			 * @param hpdouble key the double value which acts as a key
 			 * @brief Simple constructor which sets the key
 			 */
-			YNode(hpdouble key, Node* parent) : key(key) {
+			YNode(hpvec2 key, Node* parent) : key(key) {
 				this->parent = parent;
 			};
 
@@ -371,7 +369,7 @@ public:
 			}
 
 		private:
-			hpdouble key;   /**< Every YNode has a double value as key*/
+			hpvec2 key;   /**< Every YNode has a double value as key*/
 	};
 
     /**
@@ -412,7 +410,7 @@ public:
 			 *
 			 * @brief Split a Sink horizontally into a YNode with 2 children, deletes itself
 			 */
-			YNode* splitHorizontal(const hpdouble& yValue, Trapezoid* upper, Trapezoid* lower);
+			YNode* splitHorizontal(const hpvec2& key, Trapezoid* upper, Trapezoid* lower);
 
             /**
 			 * splitVertical

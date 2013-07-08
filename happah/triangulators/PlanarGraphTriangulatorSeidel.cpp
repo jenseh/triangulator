@@ -34,21 +34,35 @@ PlanarGraphTriangulatorSeidel::TrapezoidMesh2D* PlanarGraphTriangulatorSeidel::t
 		hpvec2 lower = (segment->a.y <= segment->b.y)
 						? segment->a
 						: segment->b;
-						
 		Trapezoid* current;
-		Trapezoid* next;
 		Trapezoid* end;
-				
+		Trapezoid* next;
+		
 		Trapezoid* upperTrapezoid = root->getTrapezoid(upper);
-		if(upperTrapezoid->upperLeftVertex.y != upper.y) {
+		if(upperTrapezoid->upperLeftVertex == upper && lower.x < getSegment2DX(lower.y, upperTrapezoid->leftSegment)) {
+			upperTrapezoid = upperTrapezoid->upperLeft->lowerLeft;
+		}
+		if(upperTrapezoid->upperRightVertex == upper && lower.x > getSegment2DX(lower.y, upperTrapezoid->rightSegment)) {
+			if(upperTrapezoid->upperRight) {
+				upperTrapezoid = upperTrapezoid->upperRight->lowerRight;
+			} else {
+				upperTrapezoid = upperTrapezoid->upperLeft->lowerRight;
+			}
+		}
+		
+		if((upperTrapezoid->upperLeftVertex.y != upper.y || HP_EPSILON < glm::abs(upperTrapezoid->upperLeftVertex.x - upper.x))
+			&& (upperTrapezoid->upperRightVertex.y != upper.y || HP_EPSILON < glm::abs(upperTrapezoid->upperRightVertex.x - upper.x))) { 
+			printf("upperTrapezoid: (%f, %f), (%f, %f), (%f, %f), (%f, %f)\n", upperTrapezoid->upperLeftVertex.x, upperTrapezoid->upperLeftVertex.y, upperTrapezoid->upperRightVertex.x, upperTrapezoid->upperRightVertex.y, upperTrapezoid->lowerLeftVertex.x, upperTrapezoid->lowerLeftVertex.y, upperTrapezoid->lowerRightVertex.x, upperTrapezoid->lowerRightVertex.y);
 			current = upperTrapezoid->splitHorizontal(upper);
 		} else {
 			current = upperTrapezoid;
 		}
 		
 		Trapezoid* lowerTrapezoid = root->getTrapezoid(lower);
-		if(lowerTrapezoid->upperLeftVertex.y != lower.y) {
-			end = lowerTrapezoid->splitHorizontal(lower);
+		if((lowerTrapezoid->upperLeftVertex.y != lower.y || HP_EPSILON < glm::abs(lowerTrapezoid->upperLeftVertex.x - lower.x))
+			&& (lowerTrapezoid->upperRightVertex.y != lower.y || HP_EPSILON < glm::abs(lowerTrapezoid->upperRightVertex.x - lower.x))) { 
+			printf("lowerTrapezoid: (%f, %f), (%f, %f), (%f, %f), (%f, %f)\n", lowerTrapezoid->upperLeftVertex.x, lowerTrapezoid->upperLeftVertex.y, lowerTrapezoid->upperRightVertex.x, lowerTrapezoid->upperRightVertex.y, lowerTrapezoid->lowerLeftVertex.x, lowerTrapezoid->lowerLeftVertex.y, lowerTrapezoid->lowerRightVertex.x, lowerTrapezoid->lowerRightVertex.y);
+			end = lowerTrapezoid->splitHorizontal(lower)->upperLeft;
 		} else {
 			end = lowerTrapezoid;
 		}
@@ -56,26 +70,20 @@ PlanarGraphTriangulatorSeidel::TrapezoidMesh2D* PlanarGraphTriangulatorSeidel::t
 		if(current == lowerTrapezoid) {
 		
 			current = end->upperLeft;
-		}		
-
-		if(current->leftSegment && lower.x < getSegment2DX(lower.y, current->leftSegment)) {
-			printf("starting from %X instead of %X\n", current->upperLeft->lowerLeft, current);
-			current = current->upperLeft->lowerLeft;
 		}
-
+		
 		Trapezoid* lastLeft = current->upperLeft;
-		Trapezoid* lastMiddleLeft = current->upperMiddle;
-		Trapezoid* lastMiddleRight = current->upperRight;
+		Trapezoid* lastMiddle = current->upperRight;
 		Trapezoid* lastRight = NULL;
 		
 		if(lastLeft) Trapezoid::unlink(lastLeft, current);
-		if(lastMiddleLeft) Trapezoid::unlink(lastMiddleLeft, current);
-		if(lastMiddleRight) Trapezoid::unlink(lastMiddleRight, current);
+		if(lastMiddle) Trapezoid::unlink(lastMiddle, current);
 		
 		printf("Splitting from %d to %d\n", Trapezoid::getID(current), Trapezoid::getID(end));
+		
 		Trapezoid* left = NULL;
 		Trapezoid* right = NULL;
-		while(current != end) {
+		while(current->upperLeftVertex.y != lower.y) {
 			next = current->getNextAlongSegment(segment);
 			
 			left = new Trapezoid();
@@ -98,6 +106,13 @@ PlanarGraphTriangulatorSeidel::TrapezoidMesh2D* PlanarGraphTriangulatorSeidel::t
 			right->upperRightVertex = current->upperRightVertex;
 			right->lowerLeftVertex = hpvec2(getSegment2DX(lowerY, segment), lowerY);
 			right->upperLeftVertex = hpvec2(getSegment2DX(upperY, segment), upperY);
+			
+			if(right->upperLeftVertex.x > right->upperRightVertex.x) {
+				printf("ul(%f, %f) ur(%f, %f)\n", 
+					right->upperLeftVertex.x, right->upperLeftVertex.y, 
+					right->upperRightVertex.x, right->upperRightVertex.y);
+				printf("seg((%f,%f),(%f,%f))\n",segment->a.x, segment->a.y, segment->b.x, segment->b.y);
+			}
 
 			left->leftSegment = current->leftSegment;
 			left->rightSegment = segment;
@@ -105,47 +120,31 @@ PlanarGraphTriangulatorSeidel::TrapezoidMesh2D* PlanarGraphTriangulatorSeidel::t
 			right->rightSegment = current->rightSegment;
 			
 			Trapezoid::link(lastLeft, left);
-			Trapezoid::link(lastMiddleLeft, left);
-			Trapezoid::link(lastMiddleRight, left);
+			Trapezoid::link(lastMiddle, left);
 			Trapezoid::link(lastLeft, right);
-			Trapezoid::link(lastMiddleLeft, right);
-			Trapezoid::link(lastMiddleRight, right);
+			Trapezoid::link(lastMiddle, right);
 			Trapezoid::link(lastRight, right);
 			
 			if(next->upperLeft == current) {
 				lastLeft = left;
-				lastMiddleLeft = right;
-				lastMiddleRight = next->upperMiddle;
-				lastRight = next->upperRight;
-			} else if(next->upperMiddle == current) {
-				lastLeft = next->upperLeft;
-				lastMiddleLeft = left;
-				lastMiddleRight = right;
+				lastMiddle = right;
 				lastRight = next->upperRight;
 			} else {
 				lastLeft = next->upperLeft;
-				lastMiddleLeft = next->upperMiddle;
-				lastMiddleRight = left;
+				lastMiddle = left;
 				lastRight = right;
 			}
 			
 			Trapezoid* ll = current->lowerLeft;
-			Trapezoid* lm = current->lowerMiddle;
 			Trapezoid* lr = current->lowerRight;
 			
-			Trapezoid::unlink(current, current->lowerRight);
-			Trapezoid::unlink(current, current->lowerMiddle);
-			Trapezoid::unlink(current, current->lowerLeft);
+			Trapezoid::unlink(current, ll);
+			Trapezoid::unlink(current, lr);
 			
 			if(ll == next) {
-				Trapezoid::link(right, lm);
 				Trapezoid::link(right, lr);
-			} else if(lm == next) {
+			} else if(lr == next) {
 				Trapezoid::link(left, ll);
-				Trapezoid::link(right, lr);
-			} else {
-				Trapezoid::link(left, ll);
-				Trapezoid::link(left, lm);
 			}
 			
 			delete current;
@@ -160,10 +159,8 @@ PlanarGraphTriangulatorSeidel::TrapezoidMesh2D* PlanarGraphTriangulatorSeidel::t
 
 PlanarGraphTriangulatorSeidel::Trapezoid::~Trapezoid() {
 	if(lowerRight) unlink(this, lowerRight);
-	if(lowerMiddle) unlink(this, lowerMiddle);
 	if(lowerLeft) unlink(this, lowerLeft);
 	if(upperRight) unlink(upperRight, this);
-	if(upperMiddle) unlink(upperMiddle, this);
 	if(upperLeft) unlink(upperLeft, this);
 }
 
@@ -171,8 +168,8 @@ PlanarGraphTriangulatorSeidel::Trapezoid* PlanarGraphTriangulatorSeidel::Trapezo
 	
 	Trapezoid* upper = new Trapezoid();
 	Trapezoid* lower = new Trapezoid();printf("u %d, l %d replace %d\n", Trapezoid::getID(upper), Trapezoid::getID(lower), Trapezoid::getID(this));
-
-	YNode* yNode = sink->splitHorizontal(point.y, upper, lower);
+printf("split at (%f, %f)\n", point.x, point.y);
+	YNode* yNode = sink->splitHorizontal(point, upper, lower);
 
 	upper->setSink((Sink*)yNode->getChild1());
 	lower->setSink((Sink*)yNode->getChild2());
@@ -200,18 +197,12 @@ PlanarGraphTriangulatorSeidel::Trapezoid* PlanarGraphTriangulatorSeidel::Trapezo
 	lower->rightSegment = rightSegment;
 	
 	Trapezoid* ur = upperRight;
-	Trapezoid* um = upperMiddle;
 	Trapezoid* ul = upperLeft;
 	Trapezoid* lr = lowerRight;
-	Trapezoid* lm = lowerMiddle;
 	Trapezoid* ll = lowerLeft;
 	if(ur) {
 		unlink(ur, this);
 		link(ur, upper);
-	}
-	if(um) {
-		unlink(um, this);
-		link(um, upper);
 	}
 	if(ul) {
 		unlink(ul, this);
@@ -220,10 +211,6 @@ PlanarGraphTriangulatorSeidel::Trapezoid* PlanarGraphTriangulatorSeidel::Trapezo
 	if(lr) {
 		unlink(this, lr);
 		link(lower, lr);
-	}
-	if(lm) {
-		unlink(this, lm);
-		link(lower, lm);
 	}
 	if(ll) {
 		unlink(this, ll);
@@ -241,47 +228,35 @@ PlanarGraphTriangulatorSeidel::Trapezoid* PlanarGraphTriangulatorSeidel::Trapezo
 	hpvec2 upperPoint = lowerLeft->upperRightVertex;
 		
 	hpdouble x = getSegment2DX(upperPoint.y, segment);
-	if(x < upperPoint.x) {
-		result = lowerLeft;
-	} else {
-		upperPoint = lowerMiddle->upperRightVertex;
-		if(x < upperPoint.x) {
-			result = lowerMiddle;
-		} else {
-			result = lowerRight;
-		}
-	}
+	result = (x < upperPoint.x)
+			? lowerLeft
+			: lowerRight;
 
 	return result;	
 }
 
 void PlanarGraphTriangulatorSeidel::Trapezoid::addUpper(Trapezoid* upper) {
-	if(upperLeft && upperMiddle && upperRight) {
-		printf("try to add %d to %d, but already full with %d, %d, %d\n", Trapezoid::getID(upper), Trapezoid::getID(this), Trapezoid::getID(upperLeft), Trapezoid::getID(upperMiddle), Trapezoid::getID(upperRight));
-	} else
-	if(!upperLeft || (upperLeft->leftSegment && upperLeft->leftSegment == upper->rightSegment)) {
-		upperRight = upperMiddle;
-		upperMiddle = upperLeft;
+	if(upperLeft && upperRight) {
+		printf("try to add %d to %d, but already full with %d, %d\n", Trapezoid::getID(upper), Trapezoid::getID(this), Trapezoid::getID(upperLeft), Trapezoid::getID(upperRight));
+	} else if(!upperLeft) {
 		upperLeft = upper;
-	} else if(!upperMiddle || upperMiddle->leftSegment == upper->rightSegment) {
-		upperRight = upperMiddle;
-		upperMiddle = upper;
+	} else if(upperLeft->leftSegment && upperLeft->leftSegment == upper->rightSegment) {
+		upperRight = upperLeft;
+		upperLeft = upper;
 	} else {
 		upperRight = upper;
 	}
 }
 
 void PlanarGraphTriangulatorSeidel::Trapezoid::addLower(Trapezoid* lower) {
-	if(lowerLeft && lowerMiddle && lowerRight) {
-		printf("try to add %d to %d, but already full with %d, %d, %d\n", Trapezoid::getID(lower), Trapezoid::getID(this), Trapezoid::getID(lowerLeft), Trapezoid::getID(lowerMiddle), Trapezoid::getID(lowerRight));
+	if(lowerLeft && lowerRight) {
+		printf("try to add %d to %d, but already full with %d, %d\n", Trapezoid::getID(lower), Trapezoid::getID(this), Trapezoid::getID(lowerLeft), Trapezoid::getID(lowerRight));
 	} else
-	if(!lowerLeft || (lowerLeft->leftSegment && lowerLeft->leftSegment == lower->rightSegment)) {
-		lowerRight = lowerMiddle;
-		lowerMiddle = lowerLeft;
+	if(!lowerLeft) {
 		lowerLeft = lower;
-	} else if(!lowerMiddle || lowerMiddle->leftSegment == lower->rightSegment) {
-		lowerRight = lowerMiddle;
-		lowerMiddle = lower;
+	} else if(lowerLeft->leftSegment && lowerLeft->leftSegment == lower->rightSegment) {
+		lowerRight = lowerLeft;
+		lowerLeft = lower;
 	} else {
 		lowerRight = lower;
 	}
@@ -289,13 +264,13 @@ void PlanarGraphTriangulatorSeidel::Trapezoid::addLower(Trapezoid* lower) {
 
 void PlanarGraphTriangulatorSeidel::Trapezoid::link(Trapezoid* upper, Trapezoid* lower) {
 	
-	if(upper && lower) {
-		float a = upper->lowerLeftVertex.x -lower->upperRightVertex.x;
-		float b = upper->lowerRightVertex.x -lower->upperLeftVertex.x;
+	if(upper && lower
+		&& upper->lowerLeftVertex.x != upper->lowerRightVertex.x
+		&& lower->upperLeftVertex.x != lower->upperRightVertex.x) {
+		float a = glm::sign(upper->lowerLeftVertex.x -lower->upperRightVertex.x);
+		float b = glm::sign(upper->lowerRightVertex.x -lower->upperLeftVertex.x);
 		
-		if((glm::sign(a) != glm::sign(b) || glm::abs(a) < HP_EPSILON || glm::abs(b) < HP_EPSILON)
-			&& (upper->leftSegment == NULL || upper->leftSegment != lower->rightSegment)
-			&& (upper->rightSegment == NULL || upper->rightSegment != lower->leftSegment)) {
+		if((a != b && a != 0.0 && b != 0.0)) {
 			printf("link %d, %d\n", Trapezoid::getID(upper), Trapezoid::getID(lower));
 			upper->addLower(lower);
 			lower->addUpper(upper);
@@ -309,11 +284,7 @@ void PlanarGraphTriangulatorSeidel::Trapezoid::link(Trapezoid* upper, Trapezoid*
 void PlanarGraphTriangulatorSeidel::Trapezoid::removeUpper(Trapezoid* removee) {
 	
 	if(upperLeft == removee) {
-		upperLeft = upperMiddle;
-		upperMiddle = upperRight;
-		upperRight = NULL;
-	} else if(upperMiddle == removee) {
-		upperMiddle = upperRight;
+		upperLeft = upperRight;
 		upperRight = NULL;
 	} else if(upperRight == removee) {
 		upperRight = NULL;
@@ -325,11 +296,7 @@ void PlanarGraphTriangulatorSeidel::Trapezoid::removeUpper(Trapezoid* removee) {
 void PlanarGraphTriangulatorSeidel::Trapezoid::removeLower(Trapezoid* removee) {
 	
 	if(lowerLeft == removee) {
-		lowerLeft = lowerMiddle;
-		lowerMiddle = lowerRight;
-		lowerRight = NULL;
-	} else if(lowerMiddle == removee) {
-		lowerMiddle = lowerRight;
+		lowerLeft = lowerRight;
 		lowerRight = NULL;
 	} else if(lowerRight == removee) {
 		lowerRight = NULL;
@@ -354,14 +321,14 @@ int PlanarGraphTriangulatorSeidel::Trapezoid::getID(Trapezoid* trapezoid) {
 PlanarGraphTriangulatorSeidel::Trapezoid* PlanarGraphTriangulatorSeidel::XNode::getTrapezoid(const hpvec2& point) {
 	
 	hpdouble x = getSegment2DX(point.y, key);
-	return (point.x < x)
+	return (point.x <= x)
 			? child1->getTrapezoid(point)
 			: child2->getTrapezoid(point);
 }
 
 PlanarGraphTriangulatorSeidel::Trapezoid* PlanarGraphTriangulatorSeidel::YNode::getTrapezoid(const hpvec2& point) {
 
-	return (point.y > key)
+	return (point.y > key.y || (point.y == key.y && point.x > key.x))
 			? child1->getTrapezoid(point)
 			: child2->getTrapezoid(point);
 }
@@ -371,9 +338,9 @@ PlanarGraphTriangulatorSeidel::Trapezoid* PlanarGraphTriangulatorSeidel::Sink::g
 	return trapezoid;
 }
 
-PlanarGraphTriangulatorSeidel::YNode* PlanarGraphTriangulatorSeidel::Sink::splitHorizontal(const hpdouble& yValue, Trapezoid* upper, Trapezoid* lower) {
+PlanarGraphTriangulatorSeidel::YNode* PlanarGraphTriangulatorSeidel::Sink::splitHorizontal(const hpvec2& key, Trapezoid* upper, Trapezoid* lower) {
 	
-	YNode* yNode = new YNode(yValue, parent);
+	YNode* yNode = new YNode(key, parent);
 	
 	yNode->setChild1(new Sink(upper, yNode));
 	yNode->setChild2(new Sink(lower, yNode));
