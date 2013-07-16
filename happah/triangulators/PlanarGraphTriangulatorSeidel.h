@@ -3,7 +3,7 @@
 #include "happah/triangulators/PlanarGraphTriangulator.h"
 
 #include <GL/glfw.h>
-
+#include <algorithm>
 typedef vector<SegmentEndpoints2D>::iterator PlanarGraphSegmentEndpointsIterator;
 
 /**
@@ -14,6 +14,9 @@ class PlanarGraphTriangulatorSeidel : public PlanarGraphTriangulator {
 public:
 
 	class Sink;  
+	class InstanceHolder;
+
+
 	
 	/**
 	* Singleton to generate Trapezoid UIDs for debugging purpose
@@ -29,6 +32,11 @@ public:
 		 */
 		int getNextID() {
 			return currentID++;
+		}
+
+		void reset() {
+		
+			currentID = 0;
 		}
 
 		/**
@@ -64,7 +72,7 @@ public:
 
         IDGenerator(IDGenerator const&);              // Don't Implement
         void operator=(IDGenerator const&); 		  // Don't implement
-};  
+	};  
 
     /**
     * Represents a trapezoid used for trapezoidulation of given segments.
@@ -82,6 +90,7 @@ public:
 			 */
 			Trapezoid() {
 				ID = IDGenerator::getInstance().getNextID();
+				InstanceHolder::getInstance().addTrapezoid(this);
 			}
 
 			/**
@@ -130,31 +139,122 @@ public:
 			 */		
 			Trapezoid* getNextAlongSegment(const SegmentEndpoints2D* segment);
 			
-			void drawDebug() {
+			hpvec2 mid() {
 				hpvec2 ul = upperLeftVertex;
 				hpvec2 ur = upperRightVertex;
 				hpvec2 ll = lowerLeftVertex;
 				hpvec2 lr = lowerRightVertex;
 
-				if(ul.x == -INFINITY) ul.x = -1.0;				
-				if(ur.x == INFINITY) ul.x = 1.0;				
-				if(ll.x == -INFINITY) ul.x = -1.0;				
-				if(lr.x == INFINITY) ul.x = 1.0;				
+				if(ul.x < -2.0) ul.x = -1.0;				
+				if(ur.x > 2.0) ur.x = 1.0;				
+				if(ll.x < -2.0) ll.x = -1.0;				
+				if(lr.x > 2.0) lr.x = 1.0;				
+
+				if(ul.y > 2.0) ul.y = 1.0;				
+				if(ur.y > 2.0) ur.y = 1.0;				
+				if(ll.y < -2.0) ll.y = -1.0;				
+				if(lr.y < -2.0) lr.y = -1.0;
+				
+				return (ul + ur + ll + lr) * 0.25f;
+			}
+			
+			void drawDebug() {
+				
+				hpvec2 ul = upperLeftVertex;
+				hpvec2 ur = upperRightVertex;
+				hpvec2 ll = lowerLeftVertex;
+				hpvec2 lr = lowerRightVertex;
+
+				if(ul.x < -2.0) ul.x = -1.0;				
+				if(ur.x > 2.0) ur.x = 1.0;				
+				if(ll.x < -2.0) ll.x = -1.0;				
+				if(lr.x > 2.0) lr.x = 1.0;				
+
+				if(ul.y > 2.0) ul.y = 1.0;				
+				if(ur.y > 2.0) ur.y = 1.0;				
+				if(ll.y < -2.0) ll.y = -1.0;				
+				if(lr.y < -2.0) lr.y = -1.0;				
 
 				glLineWidth(2.0f);
 	
 				glBegin(GL_LINES);
 				
-				glColor3f(0.0f, 1.0f, 0.0f);
-				
+				glColor3f(0.5f, 0.5f, 0.5f);
 				glVertex2fv((float*)&ul);
 				glVertex2fv((float*)&ur);
+				
 				glVertex2fv((float*)&ll);
 				glVertex2fv((float*)&lr);
 				
 				glEnd();
+				
+				glPointSize(10.0f);
+				glBegin(GL_POINTS);
+				
+				if(isOutside == MaybeBool::TRUE) glColor3f(0.0f, 1.0f, 0.0f);
+				if(isOutside == MaybeBool::FALSE) glColor3f(1.0f, 0.0f, 0.0f);
+				if(isOutside == MaybeBool::UNDEFINED) glColor3f(0.0f, 0.0f, 1.0f);
+				hpvec2 m = mid();
+				glVertex2fv((float*)&m);
+				
+				glEnd();
+				glPointSize(5.0f);
+				
+				glEnable(GL_LINE_STIPPLE);
+				glLineStipple(3, 0x5C55);
+				glBegin(GL_LINES);
+				
+				hpvec2 b;
+				
+				glColor3f(0.0f, 1.0f, 0.0f);
+				if(upperLeft) {
+					b = upperLeft->mid();
+					glVertex2fv((float*)&m);
+					glVertex2fv((float*)&b);
+				}
+				
+				if(upperRight) {
+					b = upperRight->mid();
+					glVertex2fv((float*)&m);
+					glVertex2fv((float*)&b);
+				}
+				
+				glColor3f(1.0f, 0.0f, 0.0f);
+				if(lowerLeft) {
+					b = lowerLeft->mid();
+					glVertex2fv((float*)&m);
+					glVertex2fv((float*)&b);
+				}
+				
+				if(lowerRight) {
+					b = lowerRight->mid();
+					glVertex2fv((float*)&m);
+					glVertex2fv((float*)&b);
+				}
+				
+				glColor3f(0.0f, 0.0f, 1.0f);
+				if(upperCornerNeighbor) {
+					b = upperCornerNeighbor->mid();
+					glVertex2fv((float*)&m);
+					glVertex2fv((float*)&b);
+				}
+				
+				glColor3f(1.0f, 1.0f, 0.0f);
+				if(lowerCornerNeighbor) {
+					b = lowerCornerNeighbor->mid();
+					glVertex2fv((float*)&m);
+					glVertex2fv((float*)&b);
+				}
+				
+				glEnd();
+				glLineStipple(1, 0xFFFF);
 				glLineWidth(3.0f);
-			};
+			}
+
+
+			static void merge(Trapezoid* upper, Trapezoid* lower);
+			void initializeMerge();
+			
 
 			/**
 			 * link()
@@ -222,6 +322,12 @@ public:
 			 */
 			static int getID(Trapezoid* trapezoid);
 
+			void flagOutside(bool isOutside);
+
+			vector<vector<hpvec2>*>* generateMonotoneChains();
+
+			void continueChain(vector<hpvec2>* chain, SegmentEndpoints2D* segment);
+
 		public:
 			Sink* sink; /**< The sink object*/
 			int ID;		/**< The Trapezoid ID, used for debugging output to prevent ugly pointers */
@@ -238,6 +344,13 @@ public:
 			Trapezoid* upperRight = NULL;	/**< Adjacent Trapezoid at the upper right */
 			Trapezoid* lowerLeft = NULL;	/**< Adjacent Trapezoid at the lower left */
 			Trapezoid* lowerRight = NULL;	/**< Adjacent Trapezoid at the lower right */
+
+			Trapezoid* upperCornerNeighbor = NULL;
+			Trapezoid* lowerCornerNeighbor = NULL;
+
+			enum MaybeBool {FALSE = 0, TRUE = 1, UNDEFINED = -1};
+
+			MaybeBool isOutside = MaybeBool::UNDEFINED;
 	};
 
     /**
@@ -292,12 +405,14 @@ public:
 			 *
 			 * @brief Simple getter for the parent
 			 */
-			Node* getParent() {return parent;};
+			vector<Node*> getParents() {return parents;};
+
+			virtual vector<vector<hpvec2>*>* generateMonotoneChains() = 0;
 
 		public:
 			Node* child1 = NULL;    /**< First child */
 			Node* child2 = NULL;    /**< Second child */
-			Node* parent = NULL;    /**< Parent node */
+			vector<Node*> parents;    /**< Parent node */
 	};
     
     /**
@@ -312,9 +427,9 @@ public:
 			 * @param SegmentEndpoints2D* key the segment which acts as a key
 			 * @brief Simple constructor which sets the key
 			 */
-			XNode(SegmentEndpoints2D* key, Node* parent) : key(key) {
-				this->parent = parent;
-			};
+			XNode(SegmentEndpoints2D* key, vector<Node*> parents) : key(key) {
+				this->parents = parents;
+			}
     
             /**
 			 * getTrapezoid
@@ -332,6 +447,18 @@ public:
 				child2->drawDebug();
 			}
 
+			vector<vector<hpvec2>*>* generateMonotoneChains() {
+				vector<vector<hpvec2>*>* chains1 = child1->generateMonotoneChains();
+				vector<vector<hpvec2>*>* chains2 = child2->generateMonotoneChains();
+				vector<vector<hpvec2>*>* result = new vector<vector<hpvec2>*>();
+				result->insert(result->end(), chains1->begin(), chains1->end());
+				result->insert(result->end(), chains2->begin(), chains2->end());
+				delete chains1;
+				delete chains2;
+				return result;
+			}
+
+
 		private:
 			SegmentEndpoints2D* key;    /**< Every XNode has a segment as key */
 	};
@@ -348,9 +475,9 @@ public:
 			 * @param hpdouble key the double value which acts as a key
 			 * @brief Simple constructor which sets the key
 			 */
-			YNode(hpvec2 key, Node* parent) : key(key) {
-				this->parent = parent;
-			};
+			YNode(hpvec2 key, vector<Node*> parents) : key(key) {
+				this->parents = parents;
+			}
 
             /**
 			 * getTrapezoid
@@ -366,6 +493,17 @@ public:
 				
 				child1->drawDebug();
 				child2->drawDebug();
+			}
+
+			vector<vector<hpvec2>*>* generateMonotoneChains() {
+				vector<vector<hpvec2>*>* chains1 = child1->generateMonotoneChains();
+				vector<vector<hpvec2>*>* chains2 = child2->generateMonotoneChains();
+				vector<vector<hpvec2>*>* result = new vector<vector<hpvec2>*>();
+				result->insert(result->end(), chains1->begin(), chains1->end());
+				result->insert(result->end(), chains2->begin(), chains2->end());
+				delete chains1;
+				delete chains2;
+				return result;
 			}
 
 		private:
@@ -385,10 +523,15 @@ public:
 			 *
 			 * @brief Simple constructor which sets the trapezoid reference and its sink
 			 */
-			Sink(Trapezoid* trapezoid, Node* parent) : trapezoid(trapezoid) {
+			Sink(Trapezoid* trapezoid, vector<Node*>& parents) : trapezoid(trapezoid) {
 				trapezoid->setSink(this);
-				this->parent = parent;
-			};
+				this->parents = parents;
+			}
+            
+            Sink(Trapezoid* trapezoid, Node* parent) : trapezoid(trapezoid) {
+				trapezoid->setSink(this);
+				this->parents.push_back(parent);
+			}
             
             /**
 			 * getTrapezoid
@@ -424,9 +567,16 @@ public:
 			 */
 			XNode* splitVertical(SegmentEndpoints2D* segment, Trapezoid* left, Trapezoid* right);
 			
+			static void merge(Sink* upperSink, Sink* lowerSink, Trapezoid* trapezoid);
+
 			void drawDebug() {
 				
 				trapezoid->drawDebug();
+			}
+
+			vector<vector<hpvec2>*>* generateMonotoneChains() {
+				
+				return trapezoid->generateMonotoneChains();
 			}
 
 		private:
@@ -445,7 +595,9 @@ public:
 		 */
 		TrapezoidMesh2D() {
 			child1 = new Sink(new Trapezoid(), this);
-		};
+		}
+
+		TriangleMesh2D* toTriangleMesh();
 
 		/**
 		 * getTrapezoid(const hpvec2& point)
@@ -457,13 +609,47 @@ public:
 		 */
 		Trapezoid* getTrapezoid(const hpvec2& point) {
 			return child1->getTrapezoid(point);
-		};
+		}
 			
 		void drawDebug() {
-				
+			
 			child1->drawDebug();
 		}
+
+		vector<vector<hpvec2>*>* generateMonotoneChains() {
+			return child1->generateMonotoneChains();
+		}
 	};
+
+
+	class InstanceHolder {
+		public:
+			static InstanceHolder& getInstance()
+        	{
+            	static InstanceHolder    instance; // Guaranteed to be destroyed.
+                                  // Instantiated on first use.
+            	return instance;
+        	}
+
+			void addTrapezoid(Trapezoid* trapezoid) {trapezoids.push_back(trapezoid);};
+
+			void removeTrapezoid(Trapezoid* trapezoid) {
+				trapezoids.erase(std::find(trapezoids.begin(), trapezoids.end(), trapezoid)); 
+			}
+			void clear() {trapezoids = vector<Trapezoid*>();};
+			vector<Trapezoid*> getTrapezoids() {return trapezoids;};
+		private:
+			vector<Trapezoid*> trapezoids;
+			int currentID; /**< the increment counter */
+
+		
+        	InstanceHolder() {};         
+
+
+        	InstanceHolder(InstanceHolder const&);              // Don't Implement
+        	void operator=(InstanceHolder const&); 		  // Don't implement
+	};
+	
 
     /**
 	 * trapezoidulate

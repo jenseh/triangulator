@@ -7,16 +7,12 @@
 
 using namespace std;
 
-//typedef iterator<random_access_iterator_tag, const SegmentEndpoints2D> PlanarGraphSegmentEndpointsIterator;
-
 class PlanarGraphTriangulator {
 
-public:
-static const PlanarGraphTriangulator& TRIANGULATOR;
+	public:
+		static const PlanarGraphTriangulator& TRIANGULATOR;
 
-PlanarGraphTriangulator();
-virtual ~PlanarGraphTriangulator();
-
-//virtual TriangleMesh2D* triangulate(PlanarGraphSegmentEndpointsIterator first, PlanarGraphSegmentEndpointsIterator last) = 0;
+		PlanarGraphTriangulator();
+		virtual ~PlanarGraphTriangulator();
 
 };

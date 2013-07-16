@@ -9,6 +9,8 @@ using namespace glm;
 int width = 1280;
 int height = 720;
 
+int segs = 1;
+
 std::vector<std::vector<vec2>> verticesLists;
 
 PlanarGraphTriangulatorSeidel triangulator;
@@ -79,12 +81,18 @@ void GLFWCALL onKey(int key, int action) {
 					}
 				}
 				delete trapezoidulation;
-				trapezoidulation = triangulator.trapezoidulate(segments.begin(), segments.end());
+				trapezoidulation = triangulator.trapezoidulate(segments.begin(), segments.begin() + segs);
 				delete triangles;
 				//triangles = triangulator.triangulate(segments.begin(), segments.end());
 				break;
 			case GLFW_KEY_ESC:
 				glfwCloseWindow();
+				break;
+			case GLFW_KEY_F1:
+				segs++;
+				break;
+			case GLFW_KEY_F2:
+				segs--;
 				break;
 		}
 	}
