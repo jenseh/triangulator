@@ -15,7 +15,7 @@ std::vector<std::vector<vec2>> verticesLists;
 
 PlanarGraphTriangulatorSeidel triangulator;
 TriangleMesh2D* triangles = NULL;
-PlanarGraphTriangulatorSeidel::TrapezoidMesh2D* trapezoidulation = NULL;
+SeidelTriangulation::TrapezoidMesh2D* trapezoidulation = NULL;
 
 vec3 colors[] = {vec3(1.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f), vec3(0.0f, 0.0f, 1.0f),
 				 vec3(1.0f, 1.0f, 0.0f), vec3(1.0f, 0.0f, 1.0f), vec3(0.0f, 1.0f, 1.0f), 
